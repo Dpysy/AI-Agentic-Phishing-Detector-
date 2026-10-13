@@ -4,7 +4,7 @@ Evidence record in -> result (Likely Scam / Verify First / Likely Safe),
 explanation, safe next steps and an optional report draft out.
 
 Decisions it follows:
-  * risk score 0-100; 70-100 Likely Scam, 40-69 Verify First, 0-39 Likely Safe
+  * risk score 0-100; 100-70 Likely Scam, 69-40 Verify First, 39-0 Likely Safe
   * confidence = how many checks actually worked
   * English and Malay only (anything else falls back to English + a note)
   * the agent only PREPARES advice and drafts. It never opens links, sends
