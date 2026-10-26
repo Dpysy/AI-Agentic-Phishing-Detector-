@@ -5,107 +5,442 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scam check</title>
 <style>
-:root{--bg:#f4f6f9;--card:#fff;--ink:#16202c;--muted:#5a6879;--line:#d5dce6;--accent:#0a6f8c;
---scam:#b42318;--verify:#a8650a;--safe:#22744a;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#0f141b;--card:#171e28;--ink:#e6ebf2;--muted:#9aa7b8;--line:#2b3647;
---accent:#55c2de;--scam:#f28b80;--verify:#e8b65f;--safe:#72d19b;color-scheme:dark}}
+:root{--bg:#eef2f7;--card:#fff;--ink:#132033;--muted:#5a6879;--line:#d5dce6;--accent:#0a6f8c;--on-accent:#fff;
+--scam:#b42318;--verify:#a8650a;--safe:#22744a;--link:#6941c6;
+--shadow:0 1px 2px rgba(16,24,40,.06),0 6px 20px rgba(16,24,40,.06);color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1017;--card:#141b25;--ink:#e6ebf2;--muted:#9aa7b8;--line:#283344;
+--accent:#55c2de;--on-accent:#04202a;--scam:#f28b80;--verify:#e8b65f;--safe:#72d19b;--link:#b692f6;
+--shadow:none;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+body{margin:0;color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+background:radial-gradient(900px 340px at 50% -140px,color-mix(in srgb,var(--accent) 22%,transparent),transparent) no-repeat,var(--bg);
 padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
-main{max-width:720px;margin:0 auto;padding:20px 16px 48px}
-h1{font-size:26px;margin:8px 0 4px}p.sub{margin:0 0 16px;color:var(--muted)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px}
-textarea{width:100%;min-height:120px;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
-.row{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;align-items:center}
-select,input[type=file]{font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);max-width:100%}
-button{font:inherit;font-weight:600;padding:10px 16px;border-radius:8px;border:0;background:var(--accent);color:#04202a;cursor:pointer}
+main{max-width:760px;margin:0 auto;padding:24px 16px 40px}
+svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+h1{font-size:24px;margin:0;line-height:1.2}h2{font-size:18px;margin:0 0 10px}h3{font-size:15px;margin:14px 0 6px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--accent);color:var(--on-accent)}
+.logo svg{width:26px;height:26px}
+.tag{margin:2px 0 0;color:var(--muted);font-size:14px;font-weight:600;letter-spacing:.02em}
+.brand .lang{margin-left:auto}
+.sub{margin:16px 0 10px;color:var(--muted)}
+.trust{list-style:none;padding:0;margin:0 0 4px;display:flex;flex-wrap:wrap;gap:8px}
+.trust li{display:flex;align-items:center;gap:6px;font-size:13px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted)}
+.trust svg{width:15px;height:15px;color:var(--safe)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px;box-shadow:var(--shadow)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{position:relative;cursor:pointer}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:block;padding:7px 14px;border:1px solid var(--line);border-radius:999px;font-weight:600;font-size:14px;color:var(--muted);background:var(--card)}
+.seg input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.lang span{padding:5px 11px;font-size:13px}
+textarea{display:block;width:100%;min-height:130px;margin-top:14px;font:inherit;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);resize:vertical}
+textarea:focus,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.drop{position:relative;display:flex;align-items:center;justify-content:center;min-height:130px;margin-top:14px;padding:16px;text-align:center;
+border:2px dashed var(--line);border-radius:10px;background:var(--bg);cursor:pointer;color:var(--muted)}
+.drop.over,.drop:focus-within{border-color:var(--accent);color:var(--ink)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop strong{display:block;color:var(--ink);margin:6px 0 2px}
+.drop svg{width:30px;height:30px;color:var(--accent)}
+#preview{display:flex;align-items:center;gap:12px;color:var(--ink)}
+#thumb{max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--line);background:#fff}
+.examples{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}
+.chipbtn{font:inherit;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px dashed var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.chipbtn:hover{border-color:var(--accent)}
+.acted{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.acted:has(input:checked){border-color:var(--scam);background:color-mix(in srgb,var(--scam) 8%,transparent)}
+.acted input{margin-top:4px}
+button{font:inherit;font-weight:600;padding:10px 16px;border-radius:10px;border:0;background:var(--accent);color:var(--on-accent);cursor:pointer}
 button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
-button:disabled{opacity:.5}
-.badge{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:700;color:#fff}
-.b-likely_scam{background:var(--scam)}.b-verify_first{background:var(--verify)}.b-likely_safe{background:var(--safe)}
-.banner{border:2px solid var(--scam);border-radius:10px;padding:12px;font-weight:700;margin-top:12px}
-ul{padding-left:20px;margin:8px 0}li{margin:4px 0}
-pre{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0;font:14px/1.4 ui-monospace,Menlo,Consolas,monospace}
-table{width:100%;border-collapse:collapse;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:6px;text-align:left}
-.ok{color:var(--safe)}.failed{color:var(--scam)}.skipped{color:var(--verify)}
-.muted{color:var(--muted);font-size:14px}[hidden]{display:none!important}
+button:disabled{opacity:.55;cursor:default}
+.primary{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:13px 18px;font-size:17px}
+a.btn{display:inline-block;font-weight:600;padding:10px 16px;border-radius:10px;border:1px solid var(--line);color:var(--ink);text-decoration:none}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;align-items:center}
+.scan{height:4px;margin-top:12px;border-radius:4px;background:linear-gradient(90deg,transparent,var(--accent),transparent) 0 0/40% 100% no-repeat,color-mix(in srgb,var(--accent) 15%,transparent);animation:scan 1.1s linear infinite}
+@keyframes scan{from{background-position:-40% 0,0 0}to{background-position:140% 0,0 0}}
+@media (prefers-reduced-motion:reduce){.scan{animation:none}}
+.err{color:var(--scam);font-size:14px;margin:10px 0 0;min-height:1em}
+.hero{--vc:var(--muted);border-left:6px solid var(--vc);background:color-mix(in srgb,var(--vc) 9%,var(--card))}
+.v-likely_scam{--vc:var(--scam)}.v-verify_first{--vc:var(--verify)}.v-likely_safe{--vc:var(--safe)}
+.hero-top{display:flex;gap:14px;align-items:center}
+.vicon{color:var(--vc)}.vicon svg{width:46px;height:46px}
+.verdict{font-size:28px;font-weight:800;color:var(--vc);line-height:1.15}
+.headline{margin:2px 0 0}
+.banner{display:flex;gap:10px;align-items:center;border:2px solid var(--scam);border-radius:10px;padding:12px;font-weight:700;margin-top:14px;background:var(--card)}
+.banner svg{color:var(--scam)}
+.meter-row{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;margin-top:16px}
+.meter{position:relative;display:flex;height:10px;border-radius:6px;margin-top:8px}
+.meter i{display:block;height:100%;opacity:.35}
+.meter i:nth-child(1){width:40%;background:var(--safe);border-radius:6px 0 0 6px}
+.meter i:nth-child(2){width:30%;background:var(--verify)}
+.meter i:nth-child(3){width:30%;background:var(--scam);border-radius:0 6px 6px 0}
+.meter b{position:absolute;top:-5px;width:6px;height:20px;margin-left:-3px;border-radius:3px;background:var(--ink);box-shadow:0 0 0 2px var(--card)}
+.scale{position:relative;height:16px;font-size:12px;color:var(--muted);margin-top:4px}
+.scale span{position:absolute;transform:translateX(-50%)}
+.scale span:first-child{transform:none}.scale span:last-child{transform:translateX(-100%)}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.fact{font-size:13px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card)}
+.fact.warn{border-color:var(--verify);color:var(--verify)}
+.cuecount{margin:12px 0 0;font-weight:600}
+.ask{margin-top:14px;padding:12px;border:1px solid var(--accent);border-radius:10px;background:var(--card)}
+.ask-title{margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
+.ask p{margin:4px 0}
+.marked{white-space:pre-wrap;overflow-wrap:anywhere;font-size:16px;line-height:1.8;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+mark{color:inherit;border-radius:3px;padding:1px 2px;background:color-mix(in srgb,var(--mk) 24%,transparent);border-bottom:2px solid var(--mk)}
+.g-pressure{--mk:var(--verify)}.g-request{--mk:var(--scam)}.g-link{--mk:var(--link)}.g-other{--mk:var(--muted)}
+.reasons{list-style:none;padding-left:0;margin:10px 0 0}.reasons li{margin:6px 0}
+.chip{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-1px;background:var(--mk)}
+ul{padding-left:20px;margin:6px 0}li{margin:4px 0}
+.steps{list-style:none;counter-reset:s;padding:0;margin:0}
+.steps li{counter-increment:s;position:relative;padding:2px 0 2px 38px;margin:10px 0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+pre{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0;font:14px/1.45 ui-monospace,Menlo,Consolas,monospace}
+.work summary{cursor:pointer;font-weight:700;font-size:18px;list-style:none;display:flex;align-items:center;gap:8px}
+.work summary::-webkit-details-marker{display:none}
+.work summary::after{content:"+";margin-left:auto;font-size:20px;color:var(--muted)}
+.work[open] summary::after{content:"−"}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
+td code{display:block;font-size:12px;color:var(--muted)}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid currentColor}
+.pill.ok{color:var(--safe)}.pill.failed{color:var(--scam)}.pill.skipped,.pill.unknown{color:var(--verify)}
+.muted{color:var(--muted);font-size:14px}
+.foot{margin-top:28px;text-align:center;color:var(--muted);font-size:13px}
+[hidden]{display:none!important}
+@media (max-width:520px){.verdict{font-size:24px}.vicon svg{width:38px;height:38px}h1{font-size:21px}}
 </style>
 </head>
 <body>
 <main>
-<h1>Scam check</h1>
-<p class="sub">Paste a message or link, or upload a photo of a QR code. Nothing is sent or opened for you.</p>
-<div class="card">
-  <textarea id="msg" placeholder="Paste the message or link here"></textarea>
-  <div class="row">
-    <label>Type <select id="channel"><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option>
-      <option value="email">Email</option><option value="url">Link</option></select></label>
-    <label>Reply in <select id="lang"><option value="en">English</option><option value="ms">Bahasa Melayu</option></select></label>
+<header class="brand">
+  <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+  <div><h1 data-t="title">Scam check</h1><p class="tag" data-t="tagline">Scam Defence &amp; Awareness</p></div>
+  <div class="seg lang" role="radiogroup" aria-label="Language / Bahasa">
+    <label><input type="radio" name="lang" value="en" checked><span>EN</span></label>
+    <label><input type="radio" name="lang" value="ms"><span>BM</span></label>
   </div>
-  <div class="row"><label>QR photo <input type="file" id="qr" accept="image/*"></label></div>
-  <div class="row"><label><input type="checkbox" id="acted"> I already clicked, replied or sent something</label></div>
-  <div class="row"><button id="go">Check</button></div>
-  <p class="muted" id="err" role="alert"></p>
-</div>
+</header>
+<p class="sub" data-t="sub">Paste a suspicious SMS, WhatsApp message, email or link, or upload a photo of a QR code.</p>
+<ul class="trust">
+  <li><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg><span data-t="trust1">Personal details masked before any AI sees them</span></li>
+  <li><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1"/><path d="M4 4l16 16"/></svg><span data-t="trust2">Links are never opened</span></li>
+  <li><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg><span data-t="trust3">English &amp; Bahasa Melayu</span></li>
+</ul>
+
+<section class="card" aria-label="Check a message">
+  <div class="seg tabs" role="radiogroup" aria-label="Message type">
+    <label><input type="radio" name="channel" value="sms" checked><span data-t="tabSms">SMS</span></label>
+    <label><input type="radio" name="channel" value="whatsapp"><span data-t="tabWa">WhatsApp</span></label>
+    <label><input type="radio" name="channel" value="email"><span data-t="tabEmail">Email</span></label>
+    <label><input type="radio" name="channel" value="url"><span data-t="tabLink">Link</span></label>
+    <label><input type="radio" name="channel" value="qr"><span data-t="tabQr">QR code</span></label>
+  </div>
+  <div id="textBox"><textarea id="msg" aria-label="Message"></textarea></div>
+  <div id="qrBox" hidden>
+    <label class="drop" id="drop" for="qr">
+      <input type="file" id="qr" accept="image/*">
+      <span id="dropHint"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/></svg>
+        <strong data-t="dropTitle">Upload a photo of the QR code</strong><span data-t="dropHint">Drop an image here, paste a screenshot (Ctrl+V), or click to choose</span></span>
+      <span id="preview" hidden><img id="thumb" alt=""><span id="photoName"></span></span>
+    </label>
+    <div class="row"><button type="button" class="alt" id="clearQr" data-t="removePhoto" hidden>Remove photo</button></div>
+  </div>
+  <div class="examples"><span class="muted" data-t="tryEx">Try an example:</span>
+    <button type="button" class="chipbtn" data-ex="0" data-t="exBank">Bank scam</button>
+    <button type="button" class="chipbtn" data-ex="1" data-t="exOtp">Real bank OTP</button>
+    <button type="button" class="chipbtn" data-ex="2" data-t="exParcel">Parcel link</button>
+    <button type="button" class="chipbtn" data-ex="3" data-t="exJob">Malay job offer</button>
+    <button type="button" class="chipbtn" data-ex="4" data-t="exNeutral">Everyday message</button>
+  </div>
+  <label class="acted"><input type="checkbox" id="acted"><span data-t="acted">I already clicked a link, replied, paid or shared details</span></label>
+  <button id="go" class="primary"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg><span id="goText" data-t="check">Check for scam signs</span></button>
+  <div class="scan" id="scan" hidden></div>
+  <p class="err" id="err" role="alert"></p>
+</section>
+
 <div id="out" hidden>
-  <div class="card">
-    <span class="badge" id="badge"></span>
-    <pre id="explain"></pre>
-    <div class="banner" id="b997" hidden>Call 997 (National Scam Response Centre) now, then your bank's fraud hotline. Speed matters.</div>
-    <div id="ask" hidden><p><strong id="q"></strong></p>
-      <div class="row"><button id="yes">Yes</button><button class="alt" id="no">No</button></div></div>
-    <h3>What to do</h3><ul id="actions"></ul>
-  </div>
-  <div class="card"><h3>Share with family</h3><pre id="family"></pre>
-    <button class="alt" data-copy="family">Copy</button></div>
-  <div class="card" id="draftCard" hidden><h3>Report draft (review it, then send it yourself)</h3><pre id="draft"></pre>
-    <button class="alt" data-copy="draft">Copy</button></div>
-  <div class="card"><h3>Show your work</h3><p class="muted" id="engine"></p>
-    <table><thead><tr><th>Check</th><th>Status</th><th>Result</th></tr></thead><tbody id="checks"></tbody></table>
-    <h4>Warning signs found</h4><ul id="cues"></ul><p class="muted">Message as checked (personal details masked):</p><pre id="redacted"></pre></div>
+  <section class="card hero" id="hero" aria-live="polite">
+    <div class="hero-top">
+      <span class="vicon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" data-v="likely_scam"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg>
+        <svg viewBox="0 0 24 24" data-v="verify_first"><path d="M12 3.5l9 16H3l9-16z"/><path d="M12 10v4M12 17v.01"/></svg>
+        <svg viewBox="0 0 24 24" data-v="likely_safe"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+      </span>
+      <div><div class="verdict" id="badge"></div><p class="headline" id="headline"></p></div>
+    </div>
+    <div class="banner" id="b997" hidden><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/></svg><span data-t="b997">Call 997 (National Scam Response Centre) now, then your bank's fraud hotline. Speed matters.</span></div>
+    <div class="meter-row"><strong id="scoreText"></strong><span class="muted" data-t="scoreNote">hand-set weights, not calibrated</span></div>
+    <div class="meter" id="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-label="Risk score"><i></i><i></i><i></i><b id="needle"></b></div>
+    <div class="scale" aria-hidden="true"><span style="left:0">0</span><span style="left:40%">40</span><span style="left:70%">70</span><span style="left:100%">100</span></div>
+    <p class="muted" id="raised" data-t="raised" hidden></p>
+    <div class="facts"><span class="fact" id="coverage"></span><span class="fact warn" id="notRun" hidden></span></div>
+    <p class="cuecount" id="cueCount" hidden></p>
+    <div id="heroWhy" hidden><h3 data-t="why">Why</h3><ul id="whyList"></ul></div>
+    <div class="ask" id="ask" hidden><p class="ask-title" data-t="askTitle">One quick question</p><p><strong id="q"></strong></p>
+      <div class="row"><button id="yes" data-t="yes">Yes</button><button class="alt" id="no" data-t="no">No</button></div></div>
+  </section>
+  <section class="card" id="hl" hidden><h2 data-t="hlTitle">Warning signs in the message</h2><div class="marked" id="marked"></div>
+    <ul class="reasons" id="reasons"></ul></section>
+  <section class="card"><h2 data-t="todo">What to do</h2><ol class="steps" id="actions"></ol></section>
+  <section class="card"><h2 data-t="family">Share with family</h2><pre id="family"></pre>
+    <div class="row"><button class="alt" data-copy="family" data-t="copy">Copy</button>
+      <a class="btn" id="waShare" target="_blank" rel="noopener noreferrer" data-t="waShare">Share on WhatsApp</a></div></section>
+  <section class="card" id="draftCard" hidden><h2 data-t="draft">Report draft (review it, then send it yourself)</h2><pre id="draft"></pre>
+    <button class="alt" data-copy="draft" data-t="copy">Copy</button></section>
+  <details class="card work"><summary data-t="work">Show your work</summary>
+    <p class="muted" id="engine"></p>
+    <table><thead><tr><th data-t="thCheck">Check</th><th data-t="thStatus">Status</th><th data-t="thResult">Result</th></tr></thead><tbody id="checks"></tbody></table>
+    <h3 data-t="cues">Warning signs found</h3><ul id="cues"></ul>
+    <h3 data-t="masked">Message as checked (personal details masked)</h3><pre id="redacted"></pre>
+    <h3 data-t="explainTitle">Full explanation</h3><pre id="explain"></pre></details>
 </div>
+<p class="foot" data-t="footer">Prototype for Scam Defence &amp; Awareness. Results can be wrong: when in doubt, contact the organisation using a number you already have.</p>
 </main>
 <script>
 const $ = id => document.getElementById(id);
-let base = null;
-function fileToB64(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(f);});}
+const UI = {
+  en: {title:'Scam check', tagline:'Scam Defence & Awareness',
+    sub:'Paste a suspicious SMS, WhatsApp message, email or link, or upload a photo of a QR code.',
+    trust1:'Personal details masked before any AI sees them', trust2:'Links are never opened', trust3:'English & Bahasa Melayu',
+    tabSms:'SMS', tabWa:'WhatsApp', tabEmail:'Email', tabLink:'Link', tabQr:'QR code',
+    ph:{sms:'Paste the SMS here, including any link', whatsapp:'Paste the WhatsApp message here',
+      email:'Paste the email here (subject and text)', url:'Paste the link here, e.g. bit.ly/… or https://…'},
+    dropTitle:'Upload a photo of the QR code', dropHint:'Drop an image here, paste a screenshot (Ctrl+V), or click to choose',
+    removePhoto:'Remove photo', needPhoto:'Choose or paste a photo of the QR code first.', pasted:'Pasted image',
+    tryEx:'Try an example:', exBank:'Bank scam', exOtp:'Real bank OTP', exParcel:'Parcel link', exJob:'Malay job offer', exNeutral:'Everyday message',
+    acted:'I already clicked a link, replied, paid or shared details', check:'Check for scam signs', checking:'Checking…',
+    b997:"Call 997 (National Scam Response Centre) now, then your bank's fraud hotline. Speed matters.",
+    score:'Risk score {s}/100', scoreNote:'hand-set weights, not calibrated',
+    raised:'The result is stricter than the score because of a safety rule: for example, a check that could not run is never treated as safe.',
+    coverage:'{ok} of {total} checks ran', notRun:'{n} could not run: treated as unknown, not safe',
+    cueCount:'{n} warning sign(s) found. They are highlighted in the message below.', why:'Why',
+    askTitle:'One quick question', yes:'Yes', no:'No', hlTitle:'Warning signs in the message', todo:'What to do',
+    family:'Share with family', copy:'Copy', copied:'Copied', copyFailed:'Copy failed', waShare:'Share on WhatsApp',
+    draft:'Report draft (review it, then send it yourself)', work:'Show your work',
+    engine:'Engine: {e}. Every check the agent ran is listed below; a check that could not run is never counted as clean.',
+    thCheck:'Check', thStatus:'Status', thResult:'Result', cues:'Warning signs found', masked:'Message as checked (personal details masked)',
+    explainTitle:'Full explanation', none:'None',
+    footer:'Prototype for Scam Defence & Awareness. Results can be wrong: when in doubt, contact the organisation using a number you already have.',
+    badImage:'That image could not be opened. Take a screenshot of the QR code and upload that.',
+    failed:'Something went wrong.', offline:'Could not reach the checker.',
+    status:{ok:'Ran', failed:'Failed', skipped:'Skipped', unknown:'Unknown'},
+    res:{flagged:'Flagged', clean:'Clean', decoded:'Read', timeout:'Timed out'},
+    tool:{url_structure:'Link structure', org_domain_match:'Bank website match', official_domain_allowlist:'Official bank domain',
+      url_reputation:'Scam-list lookup (Safe Browsing)', rules_cues:'Warning-word rules (EN + BM)', gemini_cues:'AI reading (Gemini)',
+      phone_lookup:'Phone number check', qr_decode:'QR code read'},
+    cue:{urgency:'Urgency', fear:'Fear or threat', claims_authority:'Claims authority', sensitive_request:'Asks for secrets or money',
+      callback_request:'Asks you to call back', lure:'Too-good reward', hidden_text:'Hidden text', impersonation:'Fake website',
+      link_shortener:'Shortened link', suspicious_url:'Odd link', link_in_bank_message:'Link in a bank message'}},
+  ms: {title:'Semakan penipuan', tagline:'Pertahanan & Kesedaran Penipuan',
+    sub:'Tampal SMS, mesej WhatsApp, e-mel atau pautan yang mencurigakan, atau muat naik foto kod QR.',
+    trust1:'Butiran peribadi disembunyikan sebelum AI membacanya', trust2:'Pautan tidak pernah dibuka', trust3:'Bahasa Inggeris & Bahasa Melayu',
+    tabSms:'SMS', tabWa:'WhatsApp', tabEmail:'E-mel', tabLink:'Pautan', tabQr:'Kod QR',
+    ph:{sms:'Tampal SMS di sini, termasuk sebarang pautan', whatsapp:'Tampal mesej WhatsApp di sini',
+      email:'Tampal e-mel di sini (subjek dan teks)', url:'Tampal pautan di sini, cth. bit.ly/… atau https://…'},
+    dropTitle:'Muat naik foto kod QR', dropHint:'Lepaskan imej di sini, tampal tangkapan skrin (Ctrl+V), atau klik untuk memilih',
+    removePhoto:'Buang foto', needPhoto:'Pilih atau tampal foto kod QR dahulu.', pasted:'Imej yang ditampal',
+    tryEx:'Cuba contoh:', exBank:'Penipuan bank', exOtp:'OTP bank sebenar', exParcel:'Pautan bungkusan', exJob:'Tawaran kerja (BM)', exNeutral:'Mesej biasa',
+    acted:'Saya sudah klik pautan, membalas, membayar atau berkongsi butiran', check:'Semak tanda penipuan', checking:'Sedang menyemak…',
+    b997:'Hubungi 997 (Pusat Respons Scam Kebangsaan) sekarang, kemudian talian penipuan bank anda. Masa amat penting.',
+    score:'Skor risiko {s}/100', scoreNote:'pemberat manual, belum ditentukur',
+    raised:'Keputusan lebih ketat daripada skor kerana peraturan keselamatan: contohnya, semakan yang tidak dapat dijalankan tidak pernah dianggap selamat.',
+    coverage:'{ok} daripada {total} semakan dijalankan', notRun:'{n} tidak dapat dijalankan: dianggap tidak diketahui, bukan selamat',
+    cueCount:'{n} tanda amaran ditemui. Ia diserlahkan dalam mesej di bawah.', why:'Sebab',
+    askTitle:'Satu soalan ringkas', yes:'Ya', no:'Tidak', hlTitle:'Tanda amaran dalam mesej', todo:'Apa yang perlu dibuat',
+    family:'Kongsi dengan keluarga', copy:'Salin', copied:'Disalin', copyFailed:'Gagal disalin', waShare:'Kongsi di WhatsApp',
+    draft:'Draf laporan (semak, kemudian hantar sendiri)', work:'Cara semakan dibuat',
+    engine:'Enjin: {e}. Setiap semakan yang dijalankan disenaraikan di bawah; semakan yang gagal tidak pernah dikira sebagai bersih.',
+    thCheck:'Semakan', thStatus:'Status', thResult:'Keputusan', cues:'Tanda amaran yang ditemui', masked:'Mesej yang disemak (butiran peribadi disembunyikan)',
+    explainTitle:'Penjelasan penuh', none:'Tiada',
+    footer:'Prototaip untuk Pertahanan & Kesedaran Penipuan. Keputusan boleh salah: jika ragu, hubungi organisasi melalui nombor yang anda sudah ada.',
+    badImage:'Imej itu tidak dapat dibuka. Ambil tangkapan skrin kod QR dan muat naik.',
+    failed:'Ada masalah berlaku.', offline:'Tidak dapat menghubungi penyemak.',
+    status:{ok:'Dijalankan', failed:'Gagal', skipped:'Dilangkau', unknown:'Tidak diketahui'},
+    res:{flagged:'Ditanda', clean:'Bersih', decoded:'Dibaca', timeout:'Tamat masa'},
+    tool:{url_structure:'Struktur pautan', org_domain_match:'Padanan laman web bank', official_domain_allowlist:'Domain rasmi bank',
+      url_reputation:'Semakan senarai penipuan (Safe Browsing)', rules_cues:'Peraturan kata amaran (EN + BM)', gemini_cues:'Bacaan AI (Gemini)',
+      phone_lookup:'Semakan nombor telefon', qr_decode:'Bacaan kod QR'},
+    cue:{urgency:'Desakan', fear:'Ugutan atau ketakutan', claims_authority:'Mendakwa pihak berkuasa', sensitive_request:'Minta rahsia atau wang',
+      callback_request:'Minta anda telefon semula', lure:'Ganjaran terlalu baik', hidden_text:'Teks tersembunyi', impersonation:'Laman web palsu',
+      link_shortener:'Pautan pendek', suspicious_url:'Pautan pelik', link_in_bank_message:'Pautan dalam mesej bank'}},
+};
+// Demo messages (fictional: "MyBank" is a made-up bank, numbers are fake).
+const EXAMPLES = [
+  ['sms', 'MyBank: Your account has been frozen. Verify within 24 hours at https://mybank-secure.co/verify'],
+  ['sms', 'MyBank: Your OTP is 482913. Valid for 3 minutes. Do not share this code with anyone.'],
+  ['sms', 'Pos Laju: Your parcel is on hold. Pay the RM2.50 redelivery fee today at bit.ly/3xYzAbc'],
+  ['whatsapp', 'Kerja sambilan! Dapat RM300 sehari, tiada pengalaman. Hantar nombor akaun bank anda untuk daftar.'],
+  ['whatsapp', 'Hi, see you at the group meeting tomorrow at 10am.'],
+];
+// Colour groups for the highlighted message: pressure words, requests for secrets or money, and links.
+const GROUP = {urgency:'pressure', fear:'pressure', lure:'pressure', claims_authority:'pressure',
+  sensitive_request:'request', callback_request:'request',
+  impersonation:'link', suspicious_url:'link', link_shortener:'link', link_in_bank_message:'link'};
+const groupClass = type => 'g-' + (GROUP[type] || 'other');
+const picked = name => document.querySelector(`input[name=${name}]:checked`).value;
+const lang = () => picked('lang');
+const mode = () => picked('channel');
+const t = () => UI[lang()] || UI.en;
+let base = null, photo = null;
+
+function applyLang(){
+  document.documentElement.lang = lang();
+  document.querySelectorAll('[data-t]').forEach(e => { e.textContent = t()[e.dataset.t]; });
+  applyMode();
+}
+function applyMode(){
+  const qr = mode() === 'qr';
+  $('textBox').hidden = qr; $('qrBox').hidden = !qr;
+  $('msg').placeholder = t().ph[mode()] || t().ph.sms;
+}
+function selectMode(value){
+  document.querySelector(`input[name=channel][value=${value}]`).checked = true;
+  applyMode();
+}
+function setPhoto(file){
+  photo = file || null;
+  $('qr').value = '';
+  $('preview').hidden = !photo; $('dropHint').hidden = !!photo; $('clearQr').hidden = !photo;
+  $('thumb').removeAttribute('src');
+  if(photo){
+    $('photoName').textContent = photo.name || t().pasted;
+    const r = new FileReader(); r.onload = () => { $('thumb').src = r.result; }; r.readAsDataURL(photo);
+  }
+}
+function setBusy(busy){
+  ['go','yes','no'].forEach(id => { $(id).disabled = busy; });
+  $('goText').textContent = busy ? t().checking : t().check;
+  $('scan').hidden = !busy;
+}
+// Phone photos are often 3-10 MB. Shrink to at most 1600 px on a white background (a transparent QR
+// would turn black) so the upload stays small; QR codes still decode well at this size.
+async function photoToB64(file){
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.92).split(',')[1];
+}
 async function send(answers){
-  $('err').textContent=''; $('go').disabled=true;
+  $('err').textContent = '';
+  if(!answers){
+    const qr = mode() === 'qr';
+    if(qr && !photo){ $('err').textContent = t().needPhoto; return; }
+    $('out').hidden = true;  // never leave an old result on screen under a new check
+    base = {channel: qr ? 'sms' : mode(), language: lang(), already_acted: $('acted').checked};
+    if(!qr) base.text = $('msg').value;
+  }
+  setBusy(true);
   try{
-    if(!answers){
-      base={channel:$('channel').value,language:$('lang').value,already_acted:$('acted').checked};
-      if($('qr').files[0]) base.image_b64=await fileToB64($('qr').files[0]); else base.text=$('msg').value;
+    if(!answers && mode() === 'qr'){
+      try{ base.image_b64 = await photoToB64(photo); }
+      catch(e){ $('err').textContent = t().badImage; return; }
     }
-    const r=await fetch('/api/assess',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(Object.assign({},base,answers?{answers}:{}))});
-    const d=await r.json();
-    if(!r.ok){$('err').textContent=d.error||'Something went wrong.';return;}
+    const r = await fetch('/api/assess', {method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(Object.assign({}, base, answers ? {answers} : {}))});
+    const d = await r.json();
+    if(!r.ok){ $('err').textContent = d.error || t().failed; return; }
     render(d);
-  }catch(e){$('err').textContent='Could not reach the checker.';}
-  finally{$('go').disabled=false;}
+  }catch(e){ $('err').textContent = t().offline; }
+  finally{ setBusy(false); }
 }
-function fill(ul,items){ul.replaceChildren(...items.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));}
+function fill(list, items){list.replaceChildren(...items.map(s => {const li = document.createElement('li'); li.textContent = s; return li;}));}
+// The server sends the masked message as [piece, cue type or null] pieces; marked pieces become <mark>.
+// Text is only ever set with textContent / text nodes, so nothing in a message can run as HTML.
+function renderHighlights(trace){
+  $('hl').hidden = !trace.cues.length;
+  $('marked').replaceChildren(...trace.segments.map(([piece, type]) => {
+    if(!type) return document.createTextNode(piece);
+    const m = document.createElement('mark');
+    m.className = groupClass(type); m.textContent = piece; m.title = t().cue[type] || type;
+    return m;
+  }));
+  $('reasons').replaceChildren(...trace.cues.map(c => {
+    const li = document.createElement('li'), chip = document.createElement('span'), name = document.createElement('strong');
+    chip.className = 'chip ' + groupClass(c.type);
+    name.textContent = (t().cue[c.type] || c.type) + ': ';
+    li.append(chip, name, '“' + c.text + '”' + (c.why ? ' — ' + c.why : ''));
+    return li;
+  }));
+}
+function renderVerdict(d, shown){
+  const code = shown.result_code, score = d.trace.risk_score;
+  $('hero').className = 'card hero v-' + code;
+  document.querySelectorAll('#hero [data-v]').forEach(s => s.toggleAttribute('hidden', s.dataset.v !== code));
+  $('badge').textContent = shown.result;
+  $('headline').textContent = shown.explanation.split('\n')[0].replace(/^[^:]*:\s*/, '');
+  $('scoreText').textContent = t().score.replace('{s}', score);
+  $('needle').style.left = Math.max(1, Math.min(99, score)) + '%';
+  $('meter').setAttribute('aria-valuenow', score);
+  // Safety rules can raise the result above the score's zone (e.g. an unchecked link is never "Likely Safe").
+  const rank = {likely_safe:0, verify_first:1, likely_scam:2};
+  $('raised').hidden = rank[code] <= (score >= 70 ? 2 : score >= 40 ? 1 : 0);
+  const notRun = d.trace.checks.filter(c => c.status !== 'ok').length;
+  $('coverage').textContent = t().coverage.replace('{ok}', shown.check_coverage.successful).replace('{total}', shown.check_coverage.total);
+  $('notRun').hidden = !notRun; $('notRun').textContent = t().notRun.replace('{n}', notRun);
+  const cues = d.trace.cues.length;
+  $('cueCount').hidden = !cues; $('cueCount').textContent = t().cueCount.replace('{n}', cues);
+  $('heroWhy').hidden = !!cues || !(d.reasons || []).length; fill($('whyList'), d.reasons || []);
+  $('b997').hidden = !d.call_997;
+  $('ask').hidden = d.status !== 'needs_answer'; if(d.status === 'needs_answer') $('q').textContent = d.question;
+}
+function renderChecks(checks){
+  $('checks').replaceChildren(...checks.map(c => {
+    const tr = document.createElement('tr'), name = document.createElement('td'), st = document.createElement('td'), res = document.createElement('td');
+    const id = document.createElement('code'), pill = document.createElement('span');
+    name.textContent = t().tool[c.tool] || c.tool; id.textContent = c.tool; name.append(id);
+    pill.className = 'pill ' + c.status; pill.textContent = t().status[c.status] || c.status; st.append(pill);
+    res.textContent = t().res[c.result] || String(c.result ?? '-');
+    tr.append(name, st, res); return tr;
+  }));
+}
 function render(d){
-  const shown=d.status==='final'?d:d.provisional;
-  $('out').hidden=false;
-  $('badge').textContent=shown.result; $('badge').className='badge b-'+shown.result_code;
-  $('explain').textContent=shown.explanation;
-  fill($('actions'),shown.actions);
-  $('b997').hidden=!d.call_997;
-  $('ask').hidden=d.status!=='needs_answer'; if(d.status==='needs_answer')$('q').textContent=d.question;
-  $('family').textContent=d.family_summary;
-  $('draftCard').hidden=!shown.report_draft; $('draft').textContent=shown.report_draft||'';
-  $('engine').textContent='Engine: '+d.trace.engine+'   Risk score: '+d.trace.risk_score+'/100 (hand-set weights, not calibrated)';
-  $('checks').replaceChildren(...d.trace.checks.map(c=>{const tr=document.createElement('tr');
-    [c.tool,c.status,String(c.result??'-')].forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===1)td.className=c.status;tr.appendChild(td);});return tr;}));
-  fill($('cues'),d.trace.cues.length?d.trace.cues.map(c=>c.type+': '+c.text):['None']);
-  $('redacted').textContent=d.trace.redacted_text;
-  $('out').scrollIntoView({behavior:'smooth'});
+  const shown = d.status === 'final' ? d : d.provisional;
+  $('out').hidden = false;
+  renderVerdict(d, shown);
+  renderHighlights(d.trace);
+  fill($('actions'), shown.actions);
+  $('family').textContent = d.family_summary;
+  // Opens WhatsApp with the text filled in; the person still picks who gets it and presses send.
+  $('waShare').href = 'https://wa.me/?text=' + encodeURIComponent(d.family_summary);
+  $('draftCard').hidden = !shown.report_draft; $('draft').textContent = shown.report_draft || '';
+  $('engine').textContent = t().engine.replace('{e}', d.trace.engine);
+  renderChecks(d.trace.checks);
+  fill($('cues'), d.trace.cues.length ? d.trace.cues.map(c => c.type + ': ' + c.text) : [t().none]);
+  $('redacted').textContent = d.trace.redacted_text;
+  $('explain').textContent = shown.explanation;
+  $('hero').scrollIntoView({behavior:'smooth', block:'start'});
 }
-$('go').onclick=()=>send(null);
-$('yes').onclick=()=>send({asked_for_secret:true});
-$('no').onclick=()=>send({asked_for_secret:false});
-document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>navigator.clipboard.writeText($(b.dataset.copy).textContent));
+$('go').onclick = () => send(null);
+$('yes').onclick = () => send({asked_for_secret:true});
+$('no').onclick = () => send({asked_for_secret:false});
+$('msg').addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); if(!$('go').disabled) send(null); } });
+document.querySelectorAll('input[name=channel]').forEach(r => r.onchange = applyMode);
+document.querySelectorAll('input[name=lang]').forEach(r => r.onchange = applyLang);
+document.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => {
+  const [channel, text] = EXAMPLES[b.dataset.ex];
+  selectMode(channel); setPhoto(null); $('msg').value = text; $('msg').focus();
+});
+$('qr').onchange = () => setPhoto($('qr').files[0]);
+$('clearQr').onclick = () => setPhoto(null);
+const drop = $('drop');
+['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) setPhoto(f); });
+// Pasting a screenshot anywhere on the page switches to QR mode; pasting text still goes into the box.
+document.addEventListener('paste', e => {
+  const f = [...((e.clipboardData && e.clipboardData.files) || [])].find(x => x.type.startsWith('image/'));
+  if(f){ e.preventDefault(); selectMode('qr'); setPhoto(f); }
+});
+document.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
+  try{ await navigator.clipboard.writeText($(b.dataset.copy).textContent); b.textContent = t().copied; }
+  catch(e){ b.textContent = t().copyFailed; }
+  setTimeout(() => { b.textContent = t().copy; }, 1500);
+});
+applyLang();
 </script>
 </body>
 </html>

@@ -76,6 +76,23 @@ class CheckGeminiTests(unittest.TestCase):
         self.assertFalse(ok)
 
 
+class BusyGeminiTests(unittest.TestCase):
+    def test_busy_google_is_not_a_broken_key(self):
+        def factory():
+            def call(prompt):
+                raise RuntimeError("ServerError: 503 UNAVAILABLE. This model is experiencing high demand.")
+            return call
+        ok, msg = run.check_gemini(KEY, factory)
+        self.assertIsNone(ok)
+        self.assertIn("busy", msg)
+
+    def test_timeout_does_not_hold_the_check_open(self):
+        start = time.time()
+        ok, _ = run.check_gemini(KEY, lambda: (lambda prompt: time.sleep(5)), timeout_s=0.1)
+        self.assertIsNone(ok)
+        self.assertLess(time.time() - start, 2)
+
+
 class MainTests(unittest.TestCase):
     def run_main(self, argv, env):
         out = io.StringIO()
@@ -114,6 +131,20 @@ class MainTests(unittest.TestCase):
         call, _rep, port = serve.call_args[0]
         self.assertTrue(callable(call))
         self.assertEqual(port, 8123)
+
+    def test_busy_gemini_at_startup_stays_on(self):
+        with mock.patch.object(run, "check_gemini", return_value=(None, "busy")), \
+             mock.patch("app.serve") as serve, \
+             mock.patch.object(run.gl, "make_gemini_call", return_value=lambda p: "{}"):
+            code, out = self.run_main([], {"GEMINI_API_KEY": KEY})
+        self.assertEqual(code, 0)
+        self.assertTrue(callable(serve.call_args[0][0]))
+        self.assertIn("Keeping Gemini on", out)
+
+    def test_busy_gemini_is_not_a_passing_check(self):
+        with mock.patch.object(run, "check_gemini", return_value=(None, "busy")):
+            code, _ = self.run_main(["--check"], {"GEMINI_API_KEY": KEY})
+        self.assertEqual(code, 1)
 
     def test_starts_rules_only_when_no_key(self):
         with mock.patch("app.serve") as serve:

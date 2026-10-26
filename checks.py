@@ -7,6 +7,7 @@ except decode_qr (optional: pip install opencv-python-headless numpy).
                     (needs a key and network). "clean" only means "not on Google's list yet".
 * decode_qr       : QR image -> text. A QR code is just a link in disguise.
 """
+import importlib.util
 import json
 import re
 import urllib.request
@@ -101,6 +102,11 @@ def safe_browsing(api_key, urls, opener=urllib.request.urlopen, timeout=8):
 
 
 # ------------------------------------------------------------------ QR
+def qr_supported():
+    """True when the optional QR packages are installed (pip install opencv-python-headless numpy)."""
+    return all(importlib.util.find_spec(name) for name in ("cv2", "numpy"))
+
+
 def decode_qr(image_bytes):
     """Return (text_or_None, reason). Needs opencv-python-headless + numpy."""
     try:
@@ -108,6 +114,9 @@ def decode_qr(image_bytes):
         import numpy as np
     except ImportError:
         return None, "qr_support_not_installed"
+    log = getattr(getattr(cv2, "utils", None), "logging", None)
+    if log:  # hide harmless console warnings such as "ECI is not supported properly"
+        log.setLogLevel(log.LOG_LEVEL_ERROR)
     img = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
         return None, "unreadable_image"

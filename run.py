@@ -7,9 +7,12 @@ checks that they work, then starts the app.
     python run.py --no-check       skip the live key check and just start
     python run.py --port 8080
 
+If Google is only busy (503/429/timeout) at startup, Gemini stays on: every check tries it again, and a
+check where it does not answer is shown as "failed", which can never give "Likely Safe".
+
 Environment variables:
     GEMINI_API_KEY      required for Gemini cue extraction (from Google AI Studio)
-    GEMINI_MODEL        optional, default gemini-2.5-flash (change it if you get a "model not found" error)
+    GEMINI_MODEL        optional; tried first, then gemini-flash-lite-latest, then gemini-flash-latest
     SAFE_BROWSING_KEY   optional, enables the Google Safe Browsing link check
 
 Set them (open a NEW terminal afterwards for the permanent options):
@@ -51,37 +54,37 @@ def describe_key(key):
 
 
 def check_gemini(key, call_factory=gl.make_gemini_call, timeout_s=25.0):
-    """Make ONE real call. Returns (ok, message). The message never contains the key."""
+    """Make ONE real call. Returns (ok, message); the message never contains the key.
+    ok is True (works), False (broken: key, package, model name) or None (Google busy or slow right now;
+    the key may be fine, so the app keeps Gemini on and each check shows it as failed if it stays busy)."""
     try:
         call = call_factory()
     except ImportError:
         return False, "The google-genai package is missing. Run:  pip install google-genai"
     except Exception as exc:
         return False, scrub(f"Could not set up Gemini: {type(exc).__name__}: {exc}"[:300], [key])
-    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
     import json
-    pool = ThreadPoolExecutor(max_workers=1)
     try:
-        raw = pool.submit(call, gl.build_prompt(gl.redact(GEMINI_TEST_MESSAGE))).result(timeout=timeout_s)
+        raw = gl.call_with_timeout(call, gl.build_prompt(gl.redact(GEMINI_TEST_MESSAGE)), timeout_s)
         data = json.loads(raw)
         n = len(data["cues"])
-    except FutureTimeout:
-        return False, f"No answer from Gemini within {timeout_s:.0f}s. Check your internet connection."
+    except TimeoutError:
+        return None, (f"No answer from Gemini within {timeout_s:.0f}s. Google may be busy; "
+                      "otherwise check your internet connection.")
     except Exception as exc:
         text = scrub(f"{type(exc).__name__}: {exc}"[:300], [key])
-        hint = ""
         low = text.lower()
         if "api key" in low or "api_key" in low or "401" in low or "403" in low or "permission" in low:
-            hint = "  Hint: the key looks wrong, expired or not enabled. Create a new one in Google AI Studio."
-        elif "404" in low or "not found" in low:
-            hint = "  Hint: the model name may be outdated. Set GEMINI_MODEL to a current model from AI Studio."
-        elif "connect" in low or "name or service" in low or "getaddrinfo" in low or "timed out" in low:
-            hint = "  Hint: could not reach Google. Check your internet connection, VPN or firewall."
-        elif "429" in low or "quota" in low or "resource" in low:
-            hint = "  Hint: rate or quota limit reached. Wait a minute and try again."
-        return False, text + hint
-    finally:
-        pool.shutdown(wait=False)
+            return False, text + "  Hint: the key looks wrong, expired or not enabled. Create a new one in Google AI Studio."
+        if "404" in low or "not found" in low:
+            return False, text + "  Hint: the model name may be outdated. Set GEMINI_MODEL to a current model from AI Studio."
+        if "connect" in low or "name or service" in low or "getaddrinfo" in low or "timed out" in low:
+            return None, text + "  Hint: could not reach Google. Check your internet connection, VPN or firewall."
+        if "429" in low or "quota" in low or "resource" in low:
+            return None, text + "  Hint: rate or quota limit reached. Wait a minute and try again."
+        if "503" in low or "500" in low or "unavailable" in low or "overloaded" in low or "demand" in low:
+            return None, text + "  Hint: Google is busy right now. This usually passes within minutes."
+        return False, text
     if n == 0:
         return True, "Gemini answered, but found no warning signs in a test scam message (unexpected; the rules still work)."
     return True, f"Gemini works: it labelled {n} warning sign(s) in a test scam message."
@@ -114,13 +117,15 @@ def main(argv=None):
         print("  macOS / Linux:       export GEMINI_API_KEY=\"paste-key-here\"")
     else:
         os.environ["GEMINI_API_KEY"] = gem_key  # cleaned value for the SDK call
-        print(f"GEMINI_API_KEY found: {describe_key(gem_key)}   model: {os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')}")
+        print(f"GEMINI_API_KEY found: {describe_key(gem_key)}   models, in order: {', '.join(gl.model_names())}")
         if args.no_check:
             gemini_ok = True
         else:
             print("Testing Gemini with one small call...")
             gemini_ok, msg = check_gemini(gem_key)
-            print(("  OK: " if gemini_ok else "  FAILED: ") + msg)
+            print({True: "  OK: ", False: "  FAILED: ", None: "  BUSY: "}[gemini_ok] + msg)
+            if gemini_ok is None:
+                print("  Keeping Gemini on. Checks where it does not answer show it as 'failed' (never 'Likely Safe').")
 
     reputation = None
     if sb_key:
@@ -133,13 +138,14 @@ def main(argv=None):
         if sb_ok:
             reputation = lambda urls: checks.safe_browsing(sb_key, urls)
 
-    if args.require_gemini and not gemini_ok:
-        print("Stopping: --require-gemini was given and Gemini is not working.")
-        return 1
     if args.check:
         return 0 if gemini_ok else 1
+    use_gemini = gemini_ok is not False  # None = busy right now, worth retrying per check
+    if args.require_gemini and not use_gemini:
+        print("Stopping: --require-gemini was given and Gemini is not working.")
+        return 1
 
-    call = gl.make_gemini_call() if gemini_ok else None
+    call = gl.make_gemini_call() if use_gemini else None
     if call is None:
         print("Starting in rules-only mode (no Gemini). The result page shows which engine ran.")
     import app

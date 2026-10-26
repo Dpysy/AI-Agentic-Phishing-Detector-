@@ -19,7 +19,7 @@ Usage:
 import json
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+import threading
 from urllib.parse import urlparse
 
 from checks import rules_cues
@@ -75,7 +75,14 @@ BANK_LINK_CHANNELS = {"sms", "whatsapp"}
 SECOND_LEVEL = {"com.my", "gov.my", "edu.my", "org.my", "net.my", "co.uk", "com.au"}
 SHORTENERS = {"bit.ly", "tinyurl.com", "s.id", "t.ly", "cutt.ly", "rb.gy", "is.gd"}
 
-URL_RE = re.compile(r"https?://[^\s<>\"']+", re.I)
+# Links with or without http://. Scam SMS often write "bit.ly/x" or "www.site.com", so a bare domain counts
+# as a link when it ends in a common ending. The list keeps "e.g." and "RM2.50" from looking like links.
+TLDS = ("com", "net", "org", "info", "biz", "my", "co", "io", "me", "ly", "gd", "id", "sg", "cc", "tk",
+        "xyz", "top", "site", "online", "shop", "store", "app", "link", "click", "live", "vip", "club",
+        "asia", "page", "dev", "ru", "cn", "uk", "au", "in", "ph", "example")
+URL_RE = re.compile(r"https?://[^\s<>\"']+"
+                    r"|(?<![\w.@/-])(?:[\w-]+\.)+(?:" + "|".join(TLDS) + r")\b(?:[/?#][^\s<>\"']*)?", re.I)
+SCHEME_RE = re.compile(r"https?://", re.I)
 PHONE_RE = re.compile(r"(?<!\d)(?:\+?60|0)\s?-?\d{1,2}[\s-]?\d{3,4}[\s-]?\d{4}(?!\d)")
 NRIC_RE = re.compile(r"(?<!\d)\d{6}-?\d{2}-?\d{4}(?!\d)")
 CARD_RE = re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)")
@@ -87,7 +94,17 @@ TAG_RE = re.compile(r"</?\s*message\s*>", re.I)
 
 # ---------------------------------------------------------------- redaction
 def defang(url):
-    return url.replace("http", "hxxp", 1).replace(".", "[.]")
+    return re.sub(r"(?i)^http", "hxxp", url).replace(".", "[.]")
+
+
+def find_urls(text):
+    """Every link in the text as written (with or without http://), trailing punctuation removed."""
+    return [m.group(0).rstrip(".,);") for m in URL_RE.finditer(text)]
+
+
+def with_scheme(url):
+    """'bit.ly/x' -> 'http://bit.ly/x', so it can be parsed and sent to a reputation service."""
+    return url if SCHEME_RE.match(url) else "http://" + url
 
 
 def _mask(segment):
@@ -103,9 +120,10 @@ def redact(text):
     """Mask personal data, defang URLs. URLs are split out first so their digits survive."""
     out, last = [], 0
     for m in URL_RE.finditer(text):
+        url = m.group(0).rstrip(".,);")
         out.append(_mask(text[last:m.start()]))
-        out.append(defang(m.group(0).rstrip(".,);")))
-        last = m.end()
+        out.append(defang(url))
+        last = m.start() + len(url)  # trailing punctuation stays in the text
     out.append(_mask(text[last:]))
     return "".join(out)
 
@@ -122,7 +140,7 @@ def local_checks(raw_text, channel="sms"):
     """Deterministic checks on the RAW text.
     Returns (checks_run, cues, claimed_org, urls, all_official)."""
     checks, cues = [], []
-    urls = [u.rstrip(".,);") for u in URL_RE.findall(raw_text)]
+    urls = find_urls(raw_text)
     low = raw_text.lower()
     org = next((name for name, o in ORGS.items() if any(k in low for k in o["keywords"])), None)
     all_official = False
@@ -130,11 +148,13 @@ def local_checks(raw_text, channel="sms"):
     if urls:
         bad_structure, mismatch, shortened, regs = [], [], [], []
         for u in urls:
-            host = (urlparse(u).hostname or "").lower()
-            netloc = urlparse(u).netloc
+            parsed = urlparse(with_scheme(u))
+            host = (parsed.hostname or "").lower()
             reg = registered_domain(host)
             regs.append(reg)
-            if re.fullmatch(r"[\d.]+", host) or "xn--" in host or "@" in netloc:
+            # IP address, punycode, user@host trick, or non-Latin letters posing as Latin (maybаnk with a Cyrillic а)
+            if (re.fullmatch(r"[\d.]+", host) or "xn--" in host or "@" in parsed.netloc
+                    or not host.isascii()):
                 bad_structure.append(host or u)
             if reg in SHORTENERS:
                 shortened.append(host)
@@ -155,7 +175,9 @@ def local_checks(raw_text, channel="sms"):
         all_official = all(r in ALL_OFFICIAL for r in regs) and not mismatch and not bad_structure
         if all_official:
             checks.append({"tool": "official_domain_allowlist", "status": "ok", "result": "clean"})
-        if org and channel in BANK_LINK_CHANNELS:
+        # A bare official address with no path ("visit maybank2u.com.my") is how banks tell you what to type.
+        typed_home = all(not SCHEME_RE.match(u) and urlparse(with_scheme(u)).path in ("", "/") for u in urls)
+        if org and channel in BANK_LINK_CHANNELS and not (all_official and typed_home):
             # Banks state they do not send links by SMS, so even an official-looking link is a flag.
             cues.append({"type": "link_in_bank_message", "text": urls[0] and defang(urls[0])[:80], "why": ""})
     if PHONE_RE.search(raw_text):
@@ -182,6 +204,30 @@ def build_prompt(redacted_text):
     )
 
 
+# "-latest" aliases follow Google's current Flash models, so the app keeps working when an old model is
+# retired (gemini-2.5-flash now answers 404 for new keys). Lite goes first: picking cue labels is a small
+# task, and in testing (26 Oct 2026) Lite answered in under a second while full Flash often hit the deadline.
+# GEMINI_MODEL, if set, is tried first.
+DEFAULT_MODELS = ("gemini-flash-lite-latest", "gemini-flash-latest")
+FALL_THROUGH_CODES = {404, 429, 500, 503, 504}  # retired, rate-limited or busy: try the next model
+
+
+def model_names(model=None):
+    chosen = model or os.environ.get("GEMINI_MODEL", "").strip()
+    return list(dict.fromkeys([chosen, *DEFAULT_MODELS] if chosen else DEFAULT_MODELS))
+
+
+def try_models(names, generate):
+    """Return generate(name) for the first model that answers. A retired or busy model falls through to
+    the next one; any other error (bad key, bad request) is raised at once, as is the last model's error."""
+    for i, name in enumerate(names):
+        try:
+            return generate(name)
+        except Exception as exc:
+            if getattr(exc, "code", None) not in FALL_THROUGH_CODES or i == len(names) - 1:
+                raise
+
+
 def make_gemini_call(model=None):
     """Live call via the google-genai SDK. Not exercised in the offline tests."""
     from typing import Literal
@@ -195,35 +241,69 @@ def make_gemini_call(model=None):
     class Out(BaseModel):
         cues: list[Cue]
 
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    name = model or os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")  # confirm current names in AI Studio
+    # Each HTTP request gives up after 12 s (the API refuses deadlines under 10 s), so a stuck model
+    # cannot hold the check; a busy one usually answers 503 at once and falls through to the next.
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 12_000})
+    names = model_names(model)
 
-    def call(prompt):
+    def generate(name, prompt):
         resp = client.models.generate_content(
             model=name, contents=prompt,
             config={"response_mime_type": "application/json", "response_schema": Out,
-                    "temperature": 0, "max_output_tokens": 600})
+                    "temperature": 0, "max_output_tokens": 2048})
         return resp.text  # can be None (e.g. token limit); caller handles it
+
+    def call(prompt):
+        return try_models(names, lambda name: generate(name, prompt))
+    call.models = names
     return call
 
 
-def gemini_cues(redacted_text, call, timeout_s=15.0):
+def gemini_from_env():
+    """make_gemini_call() when GEMINI_API_KEY is set and the SDK is installed; otherwise None (says why)."""
+    if not os.environ.get("GEMINI_API_KEY"):
+        return None
+    try:
+        return make_gemini_call()
+    except ImportError:
+        print("GEMINI_API_KEY is set but google-genai is not installed (pip install google-genai). Using rules only.")
+        return None
+
+
+def call_with_timeout(fn, arg, timeout_s):
+    """fn(arg) with a time limit. Raises TimeoutError when it runs over. The call runs in a daemon thread,
+    so a stuck network call can never stop the program from exiting."""
+    box = {}
+
+    def target():
+        try:
+            box["value"] = fn(arg)
+        except BaseException as exc:
+            box["error"] = exc
+    worker = threading.Thread(target=target, daemon=True)
+    worker.start()
+    worker.join(timeout_s)
+    if worker.is_alive():
+        raise TimeoutError(f"no answer within {timeout_s}s")
+    if "error" in box:
+        raise box["error"]
+    return box["value"]
+
+
+def gemini_cues(redacted_text, call, timeout_s=20.0):
     """Run Gemini as one check. Returns (cues, check). Never raises."""
     if call is None:
         return [], {"tool": "gemini_cues", "status": "skipped", "result": None}
-    pool = ThreadPoolExecutor(max_workers=1)
     try:
-        raw = pool.submit(call, build_prompt(redacted_text)).result(timeout=timeout_s)
+        raw = call_with_timeout(call, build_prompt(redacted_text), timeout_s)
         data = json.loads(raw)
         items = data["cues"]
         if not isinstance(items, list):
             raise ValueError("cues is not a list")
-    except FutureTimeout:
+    except TimeoutError:
         return [], {"tool": "gemini_cues", "status": "failed", "result": "timeout"}
     except Exception as exc:  # network, quota, bad JSON, None, wrong shape: all = unknown
         return [], {"tool": "gemini_cues", "status": "failed", "result": type(exc).__name__}
-    finally:
-        pool.shutdown(wait=False)
 
     cues, dropped, seen = [], 0, set()
     low = redacted_text.lower()
@@ -250,15 +330,15 @@ def score(cues, checks):
     return min(100, total)
 
 
-def build_record(raw_text, channel, language="en", call=None, timeout_s=15.0,
+def build_record(raw_text, channel, language="en", call=None, timeout_s=20.0,
                  url_reputation=None, extra_checks=None):
     """Raw message -> evidence record.
     call           : Gemini callable (make_gemini_call()) or None. None = not configured, not recorded.
     url_reputation : callable(urls) -> checks_run entry (e.g. checks.safe_browsing). A link with no
-                     reputation result is recorded as "skipped", so it can never be "No Red Flags"."""
+                     reputation result is recorded as "skipped", so it can never be "Likely Safe"."""
     checks, cues, org, urls, all_official = local_checks(raw_text, channel)
     if urls and not all_official:
-        checks.append(url_reputation(urls) if url_reputation
+        checks.append(url_reputation([with_scheme(u) for u in urls]) if url_reputation
                       else {"tool": "url_reputation", "status": "skipped", "result": None})
     redacted = redact(raw_text)
     r_cues, r_check = rules_cues(redacted)
@@ -294,7 +374,7 @@ if __name__ == "__main__":
         ("sms", "MyBank: Your OTP is 482913. Valid for 3 minutes. Do not share this code with anyone."),
         ("whatsapp", "Hi, see you at the group meeting tomorrow at 10am."),
     ]
-    live = make_gemini_call() if os.environ.get("GEMINI_API_KEY") else None
+    live = gemini_from_env()
     print("Gemini:", "LIVE" if live else "not configured -> check is 'skipped' (offline mode)\n")
     for ch, txt in samples:
         rec = build_record(txt, ch, call=live)

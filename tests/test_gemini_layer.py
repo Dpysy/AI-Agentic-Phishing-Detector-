@@ -152,6 +152,89 @@ class GeminiLayerTests(unittest.TestCase):
                             for c in rec["checks_run"]))
 
 
+class LinkWithoutHttpTests(unittest.TestCase):
+    def test_bare_shortener_is_a_link_and_never_safe(self):
+        rec, out = verdict("Hi, your parcel is waiting. Track it at bit.ly/3xYzAbc", None)
+        self.assertIn("link_shortener", [c["type"] for c in rec["cues"]])
+        self.assertIn({"tool": "url_reputation", "status": "skipped", "result": None}, rec["checks_run"])
+        self.assertNotEqual(out["result_code"], "likely_safe")
+        self.assertIn("bit[.]ly/3xYzAbc", rec["redacted_text"])
+
+    def test_bare_lookalike_bank_domain_is_scam(self):
+        _, out = verdict("maybank2u-login.co/secure", None, channel="url")
+        self.assertEqual(out["result_code"], "likely_scam")
+
+    def test_www_link_is_defanged_and_checked(self):
+        rec, out = verdict("Track at www.poslaju-track.example/p/123.", None, channel="whatsapp")
+        self.assertIn("www[.]poslaju-track[.]example/p/123.", rec["redacted_text"])
+        self.assertEqual(out["result_code"], "verify_first")
+
+    def test_reputation_service_gets_full_urls(self):
+        seen = []
+        gl.build_record("see bit.ly/x1", "sms", url_reputation=lambda urls: seen.extend(urls) or
+                        {"tool": "url_reputation", "status": "ok", "result": "clean"})
+        self.assertEqual(seen, ["http://bit.ly/x1"])
+
+    def test_typed_official_homepage_in_bank_sms_stays_safe(self):
+        _, out = verdict("Maybank: Your statement is ready. Log in to the MAE app or visit maybank2u.com.my.", None)
+        self.assertEqual(out["result_code"], "likely_safe")
+
+    def test_not_links(self):
+        for text in ("mail a.b@x.com now", "Pay RM2.50 e.g. today", "see file.pdf v1.2.3", "Hi.How are you"):
+            self.assertEqual(gl.find_urls(text), [], text)
+
+    def test_non_latin_letters_in_domain_are_flagged(self):
+        rec, _ = verdict("Log in at https://may\u0430nk2u.com.my/login", None, channel="email")  # Cyrillic a
+        self.assertIn({"tool": "url_structure", "status": "ok", "result": "flagged"}, rec["checks_run"])
+
+
+class ModelFallbackTests(unittest.TestCase):
+    class ApiError(Exception):
+        def __init__(self, code):
+            super().__init__(code)
+            self.code = code
+
+    def test_retired_or_busy_model_falls_through(self):
+        tried = []
+
+        def generate(name):
+            tried.append(name)
+            if name == "old":
+                raise self.ApiError(404)
+            if name == "busy":
+                raise self.ApiError(503)
+            return "answer"
+        self.assertEqual(gl.try_models(["old", "busy", "good"], generate), "answer")
+        self.assertEqual(tried, ["old", "busy", "good"])
+
+    def test_bad_key_is_raised_at_once(self):
+        tried = []
+
+        def generate(name):
+            tried.append(name)
+            raise self.ApiError(403)
+        with self.assertRaises(self.ApiError):
+            gl.try_models(["a", "b"], generate)
+        self.assertEqual(tried, ["a"])
+
+    def test_last_error_is_raised_when_all_fail(self):
+        def generate(name):
+            raise self.ApiError(503)
+        with self.assertRaises(self.ApiError):
+            gl.try_models(["a", "b"], generate)
+
+    def test_chosen_model_goes_first_then_defaults(self):
+        self.assertEqual(gl.model_names("my-model"), ["my-model", *gl.DEFAULT_MODELS])
+        self.assertEqual(gl.model_names(gl.DEFAULT_MODELS[0]), list(gl.DEFAULT_MODELS))
+
+    def test_call_with_timeout(self):
+        self.assertEqual(gl.call_with_timeout(lambda x: x + 1, 1, 1.0), 2)
+        with self.assertRaises(TimeoutError):
+            gl.call_with_timeout(lambda x: time.sleep(0.5), 0, 0.05)
+        with self.assertRaises(KeyError):
+            gl.call_with_timeout(lambda x: {}[x], "missing", 1.0)
+
+
 class RulesTests(unittest.TestCase):
     def types(self, text):
         return {c["type"] for c in cs.rules_cues(gl.redact(text))[0]}

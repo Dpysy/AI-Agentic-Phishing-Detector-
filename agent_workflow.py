@@ -27,7 +27,7 @@ RISK_VERIFY = 40
 
 TEXT = {
     "en": {
-        "labels": {"likely_scam": "Likely Scam", "verify_first": "Verify First", "likely_safe": "No Red Flags Found"},
+        "labels": {"likely_scam": "Likely Scam", "verify_first": "Verify First", "likely_safe": "Likely Safe"},
         "headline": {"likely_scam": "This looks like a scam.", "verify_first": "Be careful: verify before you act.", "likely_safe": "No strong scam indicators were identified by the available checks."},
         "actions": {
             "likely_safe": ["No strong warning signs were identified by the available checks. This is not a guarantee of safety.", "Never share an OTP/TAC or password. Messages can be spoofed to look like they come from your bank, so if one asks you to click, call a number or send money, stop and verify through an official contact you look up yourself."],
@@ -35,6 +35,7 @@ TEXT = {
             "likely_scam": ["Do not click, reply, or call back. Do not provide credentials or transfer money.", "Check the number or account using the official Semak Mule portal where applicable.", "Contact your bank using its official number if you are concerned.", "A report draft is below. Review it and submit it yourself."],
         },
         "recovery": ["If you already acted, contact your bank through its official number immediately and ask what protective steps are available.", "Change any exposed passwords from a trusted device and revoke active sessions where possible.", "If money was transferred, call the National Scam Response Centre on 997 straight away. The sooner you call, the better the chance of stopping the transfer. If nobody answers, call your bank's fraud hotline."],
+        "recovery_safe": "You said you already acted. The checks found no strong warning signs, so there is no need to call 997 for this message. If you entered a password or OTP, or money left your account unexpectedly, contact your bank through its official number.",
         "unknown": "Checks that could not confirm a result: {tools}. Treat this as unknown, not safe.",
         "coverage": "Check coverage: {level} ({ok} of {total} checks completed successfully). This is coverage, not calibrated detection confidence.",
         "levels": {"low": "low", "medium": "medium", "high": "high"},
@@ -45,7 +46,7 @@ TEXT = {
         "ask": "Did the sender ask for an OTP/TAC, password, or money transfer?",
     },
     "ms": {
-        "labels": {"likely_scam": "Kemungkinan Besar Penipuan", "verify_first": "Sahkan Dahulu", "likely_safe": "Tiada Tanda Merah Ditemui"},
+        "labels": {"likely_scam": "Kemungkinan Besar Penipuan", "verify_first": "Sahkan Dahulu", "likely_safe": "Kemungkinan Selamat"},
         "headline": {"likely_scam": "Mesej ini kelihatan seperti penipuan.", "verify_first": "Berhati-hati: sahkan dahulu sebelum bertindak.", "likely_safe": "Semakan yang tersedia tidak menemui petunjuk penipuan yang kuat."},
         "actions": {
             "likely_safe": ["Semakan yang tersedia tidak menemui tanda amaran yang kuat. Ini bukan jaminan bahawa mesej selamat.", "Jangan kongsi OTP/TAC atau kata laluan. Mesej boleh dipalsukan supaya nampak datang daripada bank anda, jadi jika ia menyuruh anda klik, telefon nombor atau hantar wang, berhenti dan sahkan melalui saluran rasmi yang anda cari sendiri."],
@@ -53,6 +54,7 @@ TEXT = {
             "likely_scam": ["Jangan klik, balas atau hubungi semula. Jangan beri kelayakan log masuk atau pindahkan wang.", "Semak nombor atau akaun melalui portal rasmi Semak Mule jika berkenaan.", "Hubungi bank melalui nombor rasmi jika anda bimbang.", "Draf laporan disediakan di bawah. Semak dan hantar sendiri."],
         },
         "recovery": ["Jika anda sudah bertindak, hubungi bank melalui nombor rasmi dengan segera untuk mendapatkan langkah perlindungan.", "Tukar kata laluan yang terdedah menggunakan peranti dipercayai dan tamatkan sesi aktif jika boleh.", "Jika wang telah dipindahkan, hubungi Pusat Respons Scam Kebangsaan di talian 997 dengan segera. Lebih cepat anda menelefon, lebih besar peluang pindahan dapat disekat. Jika tiada jawapan, hubungi talian penipuan bank anda."],
+        "recovery_safe": "Anda kata anda sudah bertindak. Semakan tidak menemui tanda amaran yang kuat, jadi tidak perlu menghubungi 997 untuk mesej ini. Jika anda telah memasukkan kata laluan atau OTP, atau wang keluar dari akaun tanpa dijangka, hubungi bank melalui nombor rasmi.",
         "unknown": "Semakan yang tidak dapat mengesahkan keputusan: {tools}. Anggap sebagai tidak diketahui, bukan selamat.",
         "coverage": "Liputan semakan: {level} ({ok} daripada {total} semakan berjaya). Ini liputan, bukan keyakinan pengesanan yang ditentukur.",
         "levels": {"low": "rendah", "medium": "sederhana", "high": "tinggi"},
@@ -164,8 +166,9 @@ def ask(question, answers, key, interactive=None):
     return None
 
 
-def reflect(rec, level, unknown, answers, t, interactive=None):
-    """Ask one follow-up when uncertainty exists; never mutate the caller's record."""
+def reflect(rec, level, unknown, answers, t, interactive=None, pending=False):
+    """Ask one follow-up when uncertainty exists; never mutate the caller's record.
+    pending=True: the question is on screen right now, so do not say the answer is missing."""
     notes = []
     unclear = level == "low" or bool(unknown) or RISK_VERIFY <= rec["risk_score"] < RISK_SCAM
     if not unclear:
@@ -177,7 +180,7 @@ def reflect(rec, level, unknown, answers, t, interactive=None):
             updated["cues"].append({"type": "sensitive_request", "text": "(reported by user)", "why": "The user reports a request for a secret or money transfer."})
         notes.append(t["asked"])
         return updated, notes
-    if reply is None:
+    if reply is None and not pending:
         notes.append(t["no_ask"])
     return rec, notes
 
@@ -194,13 +197,13 @@ def pick_result(rec):
 
     if flagged or {"sensitive_request", "impersonation"}.issubset(cues):
         return "likely_scam"
-    if cues or failed_or_unknown or no_checks:  # a listed warning sign can never sit under "No Red Flags"
+    if cues or failed_or_unknown or no_checks:  # a listed warning sign can never sit under "Likely Safe"
         if result == "likely_safe":
             result = "verify_first"
     return result
 
 
-def run(rec, answers=None, already_acted=False, interactive=None):
+def run(rec, answers=None, already_acted=False, interactive=None, pending=False):
     problems = validate(rec)
     if problems:
         return {"error": problems}
@@ -215,7 +218,7 @@ def run(rec, answers=None, already_acted=False, interactive=None):
     t = TEXT[lang]
 
     level, ok, total, unknown = check_coverage(rec)
-    rec, notes = reflect(rec, level, unknown, answers, t, interactive)
+    rec, notes = reflect(rec, level, unknown, answers, t, interactive, pending)
     result = pick_result(rec)
 
     lines = [f"{t['labels'][result]}: {t['headline'][result]}"]
@@ -229,9 +232,10 @@ def run(rec, answers=None, already_acted=False, interactive=None):
 
     actions = list(t["actions"][result])
     if already_acted:
-        actions = list(t["recovery"]) + actions
+        # No 997 alarm or report for a message the checks found clean; a calm safety net instead.
+        actions = ([t["recovery_safe"]] if result == "likely_safe" else list(t["recovery"])) + actions
     report_draft = None
-    if result == "likely_scam" or already_acted:
+    if result == "likely_scam" or (already_acted and result != "likely_safe"):
         report_draft = t["draft"].format(
             channel=rec["channel"], text=rec["redacted_text"],
             cues=", ".join(cue["type"] for cue in rec["cues"]) or "-")
@@ -244,6 +248,8 @@ def run(rec, answers=None, already_acted=False, interactive=None):
         "explanation": "\n".join(lines),
         "actions": actions,
         "report_draft": report_draft,
+        # True when the user's "yes, they asked for a secret or money" answer was used as evidence.
+        "reported_request": t["asked"] in notes,
     }
 
 
@@ -268,7 +274,7 @@ def assess(rec, answers=None, already_acted=False):
     if unclear and _as_bool(answers.get("asked_for_secret")) is None:
         return {"status": "needs_answer", "key": "asked_for_secret",
                 "question": _template(rec)["ask"],
-                "provisional": run(rec, {}, already_acted, interactive=False)}
+                "provisional": run(rec, {}, already_acted, interactive=False, pending=True)}
     return dict(run(rec, answers, already_acted, interactive=False), status="final")
 
 

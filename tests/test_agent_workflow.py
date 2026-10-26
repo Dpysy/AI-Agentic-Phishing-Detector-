@@ -94,5 +94,27 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("error", aw.run(rec))
 
 
+class LabelAndQuestionTests(unittest.TestCase):
+    def test_safe_label_is_likely_safe_in_both_languages(self):
+        self.assertEqual(aw.run(aw.DEMO_NEUTRAL)["result"], "Likely Safe")
+        self.assertEqual(aw.run(dict(aw.DEMO_NEUTRAL, language="ms"))["result"], "Kemungkinan Selamat")
+
+    def test_pending_question_does_not_say_answer_is_missing(self):
+        rec = copy.deepcopy(aw.DEMO_NEUTRAL)
+        rec["checks_run"] = [{"tool": "url_reputation", "status": "skipped", "result": None}]
+        first = aw.assess(rec)
+        self.assertEqual(first["status"], "needs_answer")
+        self.assertNotIn("could not obtain your answer", first["provisional"]["explanation"])
+
+
+class ReportedRequestTests(unittest.TestCase):
+    def test_flag_is_set_only_when_the_answer_was_used(self):
+        unclear = copy.deepcopy(aw.DEMO_NEUTRAL)
+        unclear["checks_run"] = [{"tool": "url_reputation", "status": "skipped", "result": None}]
+        self.assertTrue(aw.run(unclear, {"asked_for_secret": True})["reported_request"])
+        self.assertFalse(aw.run(unclear, {"asked_for_secret": False})["reported_request"])
+        self.assertFalse(aw.run(aw.DEMO_NEUTRAL, {"asked_for_secret": True})["reported_request"])  # clear: not asked
+
+
 if __name__ == "__main__":
     unittest.main()
