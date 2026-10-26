@@ -1,4 +1,4 @@
-# AI Agentic Phishing Detector - safer workflow prototype
+# AI Agentic Phishing Detector Safe workflow prototype
 
 This folder contains a defensive update to `agent_workflow.py`. It processes an evidence record and produces a verdict, explanation, next steps, and (when relevant) a report draft.
 
