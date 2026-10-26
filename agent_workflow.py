@@ -7,6 +7,14 @@ in an upstream detection layer and represented in ``checks_run`` / ``cues``.
 Run demos: python agent_workflow.py
 Run tests: python -m unittest discover -s tests -v
 No third-party dependencies are required.
+Decisions it follows:
+  * risk score 0-100; 100-70 Likely Scam, 69-40 Verify First, 39-0 Likely Safe
+  * confidence = how many checks actually worked
+  * English and Malay only (anything else falls back to English + a note)
+  * the agent only PREPARES advice and drafts. It never opens links, sends
+    reports or submits anything; the user does that.
+
+No network calls and no extra libraries. Run:  python agent_workflow.py
 """
 from copy import deepcopy
 import sys
