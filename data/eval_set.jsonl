@@ -1,0 +1,40 @@
+{"id": 1, "channel": "sms", "language": "en", "label": "scam", "text": "CIMB: Your account has been suspended due to suspicious activity. Verify immediately at https://cimbclicks-secure.example/verify"}
+{"id": 2, "channel": "sms", "language": "ms", "label": "scam", "text": "Maybank: Akaun anda telah disekat. Sila sahkan dalam masa 24 jam di https://maybank2u-verify.example/login"}
+{"id": 3, "channel": "sms", "language": "en", "label": "scam", "text": "Pos Laju: Your parcel is held. Pay RM2.50 redelivery fee within 24 hours: https://poslaju-redeliver.example/pay"}
+{"id": 4, "channel": "whatsapp", "language": "ms", "label": "scam", "text": "Tahniah! Anda menang hadiah RM5,000 dalam cabutan bertuah. Tuntut sekarang di https://bit.ly/3abcde"}
+{"id": 5, "channel": "sms", "language": "en", "label": "scam", "text": "LHDN: You are eligible for a tax refund of RM1,850. Submit your bank details and TAC at https://lhdn-refund.example"}
+{"id": 6, "channel": "sms", "language": "ms", "label": "scam", "text": "PDRM: Anda dikehendaki dalam kes pengubahan wang haram. Waran tangkap akan dikeluarkan. Hubungi Inspektor Ali di 012-345 6789 segera."}
+{"id": 7, "channel": "whatsapp", "language": "en", "label": "scam", "text": "Part-time job: earn RM300 per day liking videos. No experience needed. Message me on WhatsApp 011-2345 6789 to start."}
+{"id": 8, "channel": "sms", "language": "en", "label": "scam", "text": "MyBank: OTP 482913 requested for RM3,200 transfer. If this was not you, call 03-1234 5678 to cancel."}
+{"id": 9, "channel": "sms", "language": "ms", "label": "scam", "text": "CIMB: Transaksi RM2,980 dikesan tanpa kebenaran. Jika bukan anda, hubungi 03-9876 5432 untuk batalkan."}
+{"id": 10, "channel": "whatsapp", "language": "en", "label": "scam", "text": "Hi it's me, I changed my number. Urgent, can you transfer RM1,500 to this account 1234567890123? I'll pay you back tonight."}
+{"id": 11, "channel": "email", "language": "en", "label": "scam", "text": "Dear customer, your Maybank account will be closed. Enter your username, password and TAC to keep it active: https://maybank2u.com.my.verify-login.example/"}
+{"id": 12, "channel": "sms", "language": "ms", "label": "scam", "text": "Anda telah terpilih untuk bantuan tunai kerajaan RM1,000. Isi butiran akaun bank di http://bantuan-tunai.example/daftar"}
+{"id": 13, "channel": "url", "language": "en", "label": "scam", "text": "http://192.0.2.5/maybank/login"}
+{"id": 14, "channel": "sms", "language": "en", "label": "scam", "text": "Your Touch n Go eWallet has been limited. Reverify now to avoid permanent closure: https://tng-reverify.example"}
+{"id": 15, "channel": "whatsapp", "language": "en", "label": "scam", "text": "Invest RM500 today, guaranteed 30% profit weekly. Join our Telegram group, limited slots."}
+{"id": 16, "channel": "sms", "language": "ms", "label": "scam", "text": "Kad kredit anda disekat. Berikan nombor kad dan CVV anda untuk buka semula."}
+{"id": 17, "channel": "email", "language": "en", "label": "scam", "text": "Final notice: your parcel from DHL is on hold. Confirm your address and pay customs fee at https://dhl-customs-pay.example/track"}
+{"id": 18, "channel": "sms", "language": "en", "label": "scam", "text": "Maybank Alert: Your M2U access expires today. Re-activate at https://bit.ly/m2u-react"}
+{"id": 19, "channel": "qr", "language": "en", "label": "scam", "text": "https://parking-pay-malaysia.example/pay?plate=ABC1234"}
+{"id": 20, "channel": "sms", "language": "en", "label": "scam", "text": "Hi, I am from LHDN. Pay your overdue tax RM850 today or face legal action. Transfer to account 8001234567 immediately."}
+{"id": 21, "channel": "sms", "language": "en", "label": "legit", "text": "MyBank: Your OTP is 482913. Valid for 3 minutes. Do not share this code with anyone."}
+{"id": 22, "channel": "sms", "language": "ms", "label": "legit", "text": "Maybank: OTP anda ialah 123456. Sah selama 3 minit. Jangan kongsi kod ini dengan sesiapa."}
+{"id": 23, "channel": "sms", "language": "en", "label": "legit", "text": "CIMB: RM25.00 spent at COFFEE HOUSE KL on card ending 4417. Not you? Use the CIMB OCTO app to freeze your card."}
+{"id": 24, "channel": "whatsapp", "language": "en", "label": "legit", "text": "Hi, see you at the group meeting tomorrow at 10am."}
+{"id": 25, "channel": "whatsapp", "language": "ms", "label": "legit", "text": "Jumpa di kafe pukul 3 petang ya. Nanti saya bawa buku tu."}
+{"id": 26, "channel": "sms", "language": "en", "label": "legit", "text": "Your appointment at Klinik Sihat is confirmed for 27 Oct, 10:30am. Reply C to confirm."}
+{"id": 27, "channel": "sms", "language": "en", "label": "legit", "text": "J&T Express: Your parcel is out for delivery today. Track at https://www.jtexpress.my/track"}
+{"id": 28, "channel": "email", "language": "en", "label": "legit", "text": "Hi team, the sprint review is moved to Thursday 3pm. Agenda attached."}
+{"id": 29, "channel": "sms", "language": "ms", "label": "legit", "text": "Pos Laju: Bungkusan anda telah sampai di pejabat pos. Sila ambil sebelum 30 Okt dengan membawa kad pengenalan."}
+{"id": 30, "channel": "sms", "language": "en", "label": "legit", "text": "Your Grab ride receipt: RM14.20. Thank you for riding with us."}
+{"id": 31, "channel": "whatsapp", "language": "en", "label": "legit", "text": "Mum, I'll be home late tonight. Can you leave dinner out?"}
+{"id": 32, "channel": "whatsapp", "language": "ms", "label": "legit", "text": "Boleh tolong hantar nota kuliah semalam? Terima kasih."}
+{"id": 33, "channel": "sms", "language": "en", "label": "legit", "text": "Maybank: Your statement for September is ready. Log in to the MAE app or visit maybank2u.com.my."}
+{"id": 34, "channel": "email", "language": "en", "label": "legit", "text": "Your electricity bill of RM86.40 is due on 30 Oct. Pay via the official TNB app or counter."}
+{"id": 35, "channel": "sms", "language": "en", "label": "legit", "text": "CIMB: Your CIMB Clicks password was changed. If this wasn't you, please visit a branch or call the number on the back of your card."}
+{"id": 36, "channel": "sms", "language": "ms", "label": "legit", "text": "Dapatkan diskaun 10% di kedai kami hujung minggu ini sahaja. Tunjukkan mesej ini di kaunter."}
+{"id": 37, "channel": "whatsapp", "language": "en", "label": "legit", "text": "Reminder: payment for the group trip is RM120 each. Please transfer to Sarah's account when you can, details are in the group description."}
+{"id": 38, "channel": "sms", "language": "en", "label": "legit", "text": "Your verification code is 904512. Do not share it."}
+{"id": 39, "channel": "url", "language": "en", "label": "legit", "text": "https://www.maybank2u.com.my/maybank2u/malaysia/en/personal/security_alert/online_banking_safety_tips.page"}
+{"id": 40, "channel": "qr", "language": "en", "label": "legit", "text": "https://www.cimb.com.my/en/personal/help-support/security-and-fraud/phishing.html"}

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scam check</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#16202c;--muted:#5a6879;--line:#d5dce6;--accent:#0a6f8c;
+--scam:#b42318;--verify:#a8650a;--safe:#22744a;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0f141b;--card:#171e28;--ink:#e6ebf2;--muted:#9aa7b8;--line:#2b3647;
+--accent:#55c2de;--scam:#f28b80;--verify:#e8b65f;--safe:#72d19b;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+main{max-width:720px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:26px;margin:8px 0 4px}p.sub{margin:0 0 16px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px}
+textarea{width:100%;min-height:120px;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;align-items:center}
+select,input[type=file]{font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);max-width:100%}
+button{font:inherit;font-weight:600;padding:10px 16px;border-radius:8px;border:0;background:var(--accent);color:#04202a;cursor:pointer}
+button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.5}
+.badge{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:700;color:#fff}
+.b-likely_scam{background:var(--scam)}.b-verify_first{background:var(--verify)}.b-likely_safe{background:var(--safe)}
+.banner{border:2px solid var(--scam);border-radius:10px;padding:12px;font-weight:700;margin-top:12px}
+ul{padding-left:20px;margin:8px 0}li{margin:4px 0}
+pre{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0;font:14px/1.4 ui-monospace,Menlo,Consolas,monospace}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:6px;text-align:left}
+.ok{color:var(--safe)}.failed{color:var(--scam)}.skipped{color:var(--verify)}
+.muted{color:var(--muted);font-size:14px}[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<h1>Scam check</h1>
+<p class="sub">Paste a message or link, or upload a photo of a QR code. Nothing is sent or opened for you.</p>
+<div class="card">
+  <textarea id="msg" placeholder="Paste the message or link here"></textarea>
+  <div class="row">
+    <label>Type <select id="channel"><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option>
+      <option value="email">Email</option><option value="url">Link</option></select></label>
+    <label>Reply in <select id="lang"><option value="en">English</option><option value="ms">Bahasa Melayu</option></select></label>
+  </div>
+  <div class="row"><label>QR photo <input type="file" id="qr" accept="image/*"></label></div>
+  <div class="row"><label><input type="checkbox" id="acted"> I already clicked, replied or sent something</label></div>
+  <div class="row"><button id="go">Check</button></div>
+  <p class="muted" id="err" role="alert"></p>
+</div>
+<div id="out" hidden>
+  <div class="card">
+    <span class="badge" id="badge"></span>
+    <pre id="explain"></pre>
+    <div class="banner" id="b997" hidden>Call 997 (National Scam Response Centre) now, then your bank's fraud hotline. Speed matters.</div>
+    <div id="ask" hidden><p><strong id="q"></strong></p>
+      <div class="row"><button id="yes">Yes</button><button class="alt" id="no">No</button></div></div>
+    <h3>What to do</h3><ul id="actions"></ul>
+  </div>
+  <div class="card"><h3>Share with family</h3><pre id="family"></pre>
+    <button class="alt" data-copy="family">Copy</button></div>
+  <div class="card" id="draftCard" hidden><h3>Report draft (review it, then send it yourself)</h3><pre id="draft"></pre>
+    <button class="alt" data-copy="draft">Copy</button></div>
+  <div class="card"><h3>Show your work</h3><p class="muted" id="engine"></p>
+    <table><thead><tr><th>Check</th><th>Status</th><th>Result</th></tr></thead><tbody id="checks"></tbody></table>
+    <h4>Warning signs found</h4><ul id="cues"></ul><p class="muted">Message as checked (personal details masked):</p><pre id="redacted"></pre></div>
+</div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let base = null;
+function fileToB64(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(f);});}
+async function send(answers){
+  $('err').textContent=''; $('go').disabled=true;
+  try{
+    if(!answers){
+      base={channel:$('channel').value,language:$('lang').value,already_acted:$('acted').checked};
+      if($('qr').files[0]) base.image_b64=await fileToB64($('qr').files[0]); else base.text=$('msg').value;
+    }
+    const r=await fetch('/api/assess',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(Object.assign({},base,answers?{answers}:{}))});
+    const d=await r.json();
+    if(!r.ok){$('err').textContent=d.error||'Something went wrong.';return;}
+    render(d);
+  }catch(e){$('err').textContent='Could not reach the checker.';}
+  finally{$('go').disabled=false;}
+}
+function fill(ul,items){ul.replaceChildren(...items.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));}
+function render(d){
+  const shown=d.status==='final'?d:d.provisional;
+  $('out').hidden=false;
+  $('badge').textContent=shown.result; $('badge').className='badge b-'+shown.result_code;
+  $('explain').textContent=shown.explanation;
+  fill($('actions'),shown.actions);
+  $('b997').hidden=!d.call_997;
+  $('ask').hidden=d.status!=='needs_answer'; if(d.status==='needs_answer')$('q').textContent=d.question;
+  $('family').textContent=d.family_summary;
+  $('draftCard').hidden=!shown.report_draft; $('draft').textContent=shown.report_draft||'';
+  $('engine').textContent='Engine: '+d.trace.engine+'   Risk score: '+d.trace.risk_score+'/100 (hand-set weights, not calibrated)';
+  $('checks').replaceChildren(...d.trace.checks.map(c=>{const tr=document.createElement('tr');
+    [c.tool,c.status,String(c.result??'-')].forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===1)td.className=c.status;tr.appendChild(td);});return tr;}));
+  fill($('cues'),d.trace.cues.length?d.trace.cues.map(c=>c.type+': '+c.text):['None']);
+  $('redacted').textContent=d.trace.redacted_text;
+  $('out').scrollIntoView({behavior:'smooth'});
+}
+$('go').onclick=()=>send(null);
+$('yes').onclick=()=>send({asked_for_secret:true});
+$('no').onclick=()=>send({asked_for_secret:false});
+document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>navigator.clipboard.writeText($(b.dataset.copy).textContent));
+</script>
+</body>
+</html>

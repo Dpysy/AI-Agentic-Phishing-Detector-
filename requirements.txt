@@ -1,0 +1,6 @@
+# Core workflow, rules, tests, demo server: standard library only.
+# Optional:
+google-genai          # live Gemini calls (gemini_layer.make_gemini_call)
+opencv-python-headless  # QR image decoding (checks.decode_qr)
+numpy
+# Tests only (QR round-trip): qrcode, pillow
